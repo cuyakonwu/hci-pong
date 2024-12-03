@@ -87,6 +87,9 @@ elif mode == 'p2':
 
 difficulty_announced = False
 difficulty_selection = False
+player_said_hi = False
+opponent_said_hi = False
+game_running = False
 
 def on_receive_game(address, *args):
     global game_running, difficulty_announced, difficulty_selection, player_said_hi, opponent_said_hi
@@ -140,40 +143,41 @@ def audio_callback(in_data, frame_count, time_info, status):
 audio_callback.frame_index = 0
 
 def on_receive_ball(address, *args):
-    # print("> ball position: (" + str(args[0]) + ", " + str(args[1]) + ")")
-    global current_freq, current_volume
-    y = args[1]
-    x = args[0]
+    if game_running:
+        # print("> ball position: (" + str(args[0]) + ", " + str(args[1]) + ")")
+        global current_freq, current_volume
+        y = args[1]
+        x = args[0]
 
-    min_freq = 200.0
-    max_freq = 1000.0
-    # Adjust below
-    min_y = 0.0
-    max_y = 450.0
+        min_freq = 200.0
+        max_freq = 1000.0
+        # Adjust below
+        min_y = 0.0
+        max_y = 450.0
 
-    min_volume = 0.1
-    max_volume = 1.0
-    # Adjust below
-    min_x = 0.0
-    max_x = 800.0
+        min_volume = 0.01
+        max_volume = 1.0
+        # Adjust below
+        min_x = 0.0
+        max_x = 800.0
 
-    new_freq = min_freq + (max_y - y) * (max_freq - min_freq) / (max_y - min_y)
+        new_freq = min_freq + (max_y - y) * (max_freq - min_freq) / (max_y - min_y)
 
-    if player_side == 'left':
-        # Player 1: Volume decreases as x increases
-        new_volume = min_volume + (max_x - x) * (max_volume - min_volume) / (max_x - min_x)
-    else:
-        # Player 2: Volume increases as x increases
-        new_volume = min_volume + (x - min_x) * (max_volume - min_volume) / (max_x - min_x)
+        if player_side == 'left':
+            # Player 1: Volume decreases as x increases
+            new_volume = min_volume + (max_x - x) * (max_volume - min_volume) / (max_x - min_x)
+        else:
+            # Player 2: Volume increases as x increases
+            new_volume = min_volume + (x - min_x) * (max_volume - min_volume) / (max_x - min_x)
 
-    # Clamp volume between min_volume and max_volume
-    new_volume = max(min(new_volume, max_volume), min_volume)
+        # Clamp volume between min_volume and max_volume
+        new_volume = max(min(new_volume, max_volume), min_volume)
 
-    # Update the global variables with thread safety
-    with freq_lock:
-        current_freq = new_freq
-    with volume_lock:
-        current_volume = new_volume
+        # Update the global variables with thread safety
+        with freq_lock:
+            current_freq = new_freq
+        with volume_lock:
+            current_volume = new_volume
 
 
 def on_receive_paddle(address, *args):
@@ -195,10 +199,6 @@ def on_receive_hitpaddle(address, *args):
 def on_receive_ballout(address, *args):
     side = args[0]  # 1 for left side, 2 for right side
     print(f"> Ball went out on {'left' if side == 1 else 'right'} side")
-    if (side == 1 and mode == 'p1') or (side == 2 and mode == 'p2'):
-        subprocess.run(f'say "You lost a point"', shell=True)
-    else:
-        subprocess.run(f'say "You scored a point"', shell=True)
 
 
 def on_receive_ballbounce(address, *args):
@@ -219,7 +219,7 @@ def on_receive_scores(address, *args):
     with score_lock:
         # Determine if the scores have changed
         if score_p1 != prev_score_p1 or score_p2 != prev_score_p2:
-            subprocess.run(f'say f"The score is {score_p1} to {score_p2}"', shell=True)
+            subprocess.run(f'say "The score is {score_p1} to {score_p2}"', shell=True)
 
         prev_score_p1 = score_p1
         prev_score_p2 = score_p2
@@ -229,7 +229,7 @@ def on_receive_scores(address, *args):
 def on_receive_level(address, *args):
     level = args[0]
     print(f"> level now: {level}")
-    subprocess.run(f'say f"The difficulty level is {level}"', shell=True)
+    subprocess.run(f'say "The difficulty level is {level}"', shell=True)
 
 player_frozen = False
 
@@ -320,11 +320,8 @@ dispatcher_player.map("/p2bigpaddle", on_receive_p2_bigpaddle)
 
 # example 1: speech recognition functions using google api
 # -------------------------------------#
-player_said_hi = False
-opponent_said_hi = False
-
 def listen_to_speech():
-    global quit, difficulty_selection, player_said_hi, game_running
+    global quit, difficulty_selection, player_said_hi, opponent_said_hi, game_running
     while not quit:
         r = sr.Recognizer()
         with sr.Microphone() as source:
@@ -342,7 +339,7 @@ def listen_to_speech():
             else:
                 command = recog_results.lower()
                 if command == "hi":
-                    global player_said_hi
+                    player_said_hi = True
                     client.send_message('/hi', 0)
                     print("You said hi!")
                     subprocess.run('say "Hi!"', shell=True)
