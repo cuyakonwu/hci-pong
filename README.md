@@ -2,7 +2,9 @@
 Initializing venv
 ``` bash
 source pong/bin/activate
+```
 
+``` bash
 pip install -r requirements-host.txt
 
 pip install -r requirements-player.txt
@@ -16,6 +18,7 @@ pip3 install PyAudio
 pip3 install playsound
 pip3 install aubio
 ```
+
 For hosting
 ``` bash
 python pong-audio-host-do-not-edit.py
