@@ -143,41 +143,40 @@ def audio_callback(in_data, frame_count, time_info, status):
 audio_callback.frame_index = 0
 
 def on_receive_ball(address, *args):
-    if game_running:
-        # print("> ball position: (" + str(args[0]) + ", " + str(args[1]) + ")")
-        global current_freq, current_volume
-        y = args[1]
-        x = args[0]
+    # print("> ball position: (" + str(args[0]) + ", " + str(args[1]) + ")")
+    global current_freq, current_volume
+    y = args[1]
+    x = args[0]
 
-        min_freq = 200.0
-        max_freq = 1000.0
-        # Adjust below
-        min_y = 0.0
-        max_y = 450.0
+    min_freq = 200.0
+    max_freq = 1000.0
+    # Adjust below
+    min_y = 0.0
+    max_y = 450.0
 
-        min_volume = 0.01
-        max_volume = 1.0
-        # Adjust below
-        min_x = 0.0
-        max_x = 800.0
+    min_volume = 0.01
+    max_volume = 1.0
+    # Adjust below
+    min_x = 0.0
+    max_x = 800.0
 
-        new_freq = min_freq + (max_y - y) * (max_freq - min_freq) / (max_y - min_y)
+    new_freq = min_freq + (max_y - y) * (max_freq - min_freq) / (max_y - min_y)
 
-        if player_side == 'left':
-            # Player 1: Volume decreases as x increases
-            new_volume = min_volume + (max_x - x) * (max_volume - min_volume) / (max_x - min_x)
-        else:
-            # Player 2: Volume increases as x increases
-            new_volume = min_volume + (x - min_x) * (max_volume - min_volume) / (max_x - min_x)
+    if player_side == 'left':
+        # Player 1: Volume decreases as x increases
+        new_volume = min_volume + (max_x - x) * (max_volume - min_volume) / (max_x - min_x)
+    else:
+        # Player 2: Volume increases as x increases
+        new_volume = min_volume + (x - min_x) * (max_volume - min_volume) / (max_x - min_x)
 
-        # Clamp volume between min_volume and max_volume
-        new_volume = max(min(new_volume, max_volume), min_volume)
+    # Clamp volume between min_volume and max_volume
+    new_volume = max(min(new_volume, max_volume), min_volume)
 
-        # Update the global variables with thread safety
-        with freq_lock:
-            current_freq = new_freq
-        with volume_lock:
-            current_volume = new_volume
+    # Update the global variables with thread safety
+    with freq_lock:
+        current_freq = new_freq
+    with volume_lock:
+        current_volume = new_volume
 
 
 def on_receive_paddle(address, *args):
