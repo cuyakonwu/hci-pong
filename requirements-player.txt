@@ -4,4 +4,3 @@ numpy
 playsound==1.2.2
 PyAudio
 SpeechRecognition
-subprocess

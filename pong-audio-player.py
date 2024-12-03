@@ -120,7 +120,7 @@ def on_receive_game(address, *args):
 
 # Ball Sound Variables
 current_freq = 440.0  # Startig frequency
-volume = 0.5          # Volume (0.0 - 1.0)
+current_volume = 0.5          # Volume (0.0 - 1.0)
 fs = 44100            # Hz
 freq_lock = threading.Lock()
 volume_lock = threading.Lock()
@@ -131,21 +131,13 @@ def audio_callback(in_data, frame_count, time_info, status):
         freq = current_freq
     with volume_lock:
         vol = current_volume
-    t = (np.arange(frame_count) + audio_callback.frame_index) / fs
-    data = (np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    t = (num.arange(frame_count) + audio_callback.frame_index) / fs
+    data = (num.sin(2 * num.pi * freq * t)).astype(num.float32)
     audio_callback.frame_index += frame_count
-    return (vol * data.tobytes(), pyaudio.paContinue)
-
+    data *= vol  # Multiply the NumPy array by vol
+    return (data.tobytes(), pyaudio.paContinue)
 
 audio_callback.frame_index = 0
-p_out = pyaudio.PyAudio()
-stream_out = p_out.open(format=pyaudio.paFloat32,
-                        channels=1,
-                        rate=fs,
-                        output=True,
-                        stream_callback=audio_callback)
-
-stream_out.start_stream()
 
 def on_receive_ball(address, *args):
     # print("> ball position: (" + str(args[0]) + ", " + str(args[1]) + ")")
@@ -339,7 +331,7 @@ def listen_to_speech():
             if difficulty_selection:
                 print("[speech recognition] Please say a difficulty level (easy, medium, hard):")
             else:
-                print("[speech recognition] Say a command (hi, play, start, quit):")
+                print("[speech recognition] Say a hi to begin:")
             audio = r.listen(source)
         try:
             recog_results = r.recognize_google(audio)
@@ -349,9 +341,7 @@ def listen_to_speech():
                 handle_difficulty_selection(recog_results.lower())
             else:
                 command = recog_results.lower()
-                if command in ["play", "start"]:
-                    client.send_message('/setgame', 1)
-                elif command == "hi":
+                if command == "hi":
                     global player_said_hi
                     client.send_message('/hi', 0)
                     print("You said hi!")
@@ -375,10 +365,21 @@ def listen_to_speech():
 # -------------------------------------#
 # PyAudio object.
 p = pyaudio.PyAudio()
-# Open stream.
-stream = p.open(format=pyaudio.paFloat32,
-    channels=1, rate=44100, input=True,
-    frames_per_buffer=1024)
+# Open output stream
+stream_out = p.open(format=pyaudio.paFloat32,
+                    channels=1,
+                    rate=fs,
+                    output=True,
+                    stream_callback=audio_callback)
+
+# Open input stream
+stream_in = p.open(format=pyaudio.paFloat32,
+                   channels=1,
+                   rate=44100,
+                   input=True,
+                   frames_per_buffer=1024)
+
+
 # Aubio's pitch detection.
 pDetection = aubio.pitch("default", 2048,
     2048//2, 44100)
@@ -390,7 +391,7 @@ def sense_microphone():
     global quit
     global debug
     while not quit:
-        data = stream.read(1024,exception_on_overflow=False)
+        data = stream_in.read(1024,exception_on_overflow=False)
         samples = num.fromstring(data,
             dtype=aubio.float_type)
 
