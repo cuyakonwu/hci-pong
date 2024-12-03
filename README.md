@@ -1,4 +1,5 @@
 # hci-pong
+``` bash
 pip install -r requirements-host.txt
 
 pip install -r requirements-player.txt
@@ -13,3 +14,4 @@ pip3 install pyglet==1.5.21
 pip3 install PyAudio
 pip3 install playsound
 pip3 install aubio
+```
