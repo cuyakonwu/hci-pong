@@ -23,5 +23,4 @@ python pong-audio-host-do-not-edit.py
 Player connect
 ``` bash
 python pong-audio-player.py p1
-python pong-audio-player.py p2
 ```
