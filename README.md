@@ -2,9 +2,7 @@
 Initializing venv
 ``` bash
 source pong/bin/activate
-```
 
-``` bash
 pip install -r requirements-host.txt
 
 pip install -r requirements-player.txt
