@@ -1,11 +1,11 @@
 # hci-pong
 Initializing venv
 ``` bash
+source pong/bin/activate
+
 pip install -r requirements-host.txt
 
 pip install -r requirements-player.txt
-
-source pong/bin/activate
 
 pip3 install numpy
 pip3 install PyObjC
