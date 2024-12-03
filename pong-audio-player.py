@@ -85,21 +85,37 @@ elif mode == 'p2':
 # functions receiving messages from host
 # TODO: add audio output so you know what's going on in the game
 
+difficulty_announced = False
+difficulty_selection = False
+
 def on_receive_game(address, *args):
-    # 0: menu, 1: game starts
+    global game_running, difficulty_announced, difficulty_selection, player_said_hi, opponent_said_hi
     game_state = args[0]
-    global game_running
+    print(f"> Game state: {game_state}")
+
     if game_state == 1:
-        print("> Game stated")
-        game_running = True
-        subprocess.run('say "The game has started"', shell=True)
+        if not game_running:
+            print("> Game started")
+            game_running = True
+            difficulty_announced = False
+            difficulty_selection = False
+            player_said_hi = False
+            opponent_said_hi = False
+            subprocess.run('say "The game has started"', shell=True)
     elif game_state == 0:
-        print("> Returned to menu")
-        game_running = False
-        subprocess.run('say "The game is back in the menu"', shell=True)
+        if not difficulty_announced:
+            print("> In menu")
+            subprocess.run('say "Select difficulty"', shell=True)
+            difficulty_announced = True
+            difficulty_selection = True
+            player_said_hi = False
+            opponent_said_hi = False
     else:
-        print(f"> Unkown game state: {game_state}")
+        print(f"> Unknown game state: {game_state}")
         subprocess.run('say "Received unknown game state"', shell=True)
+
+
+
 
 
 # Ball Sound Variables
@@ -169,18 +185,29 @@ def on_receive_ball(address, *args):
 
 
 def on_receive_paddle(address, *args):
-    # print("> paddle position: (" + str(args[0]) + ", " + str(args[1]) + ")")
-    paddle_x = args[0]
-    paddle_y = args[1]
+    print("> paddle position: (" + str(args[0]) + ", " + str(args[1]) + ")")
+    pass
 
 
 def on_receive_hitpaddle(address, *args):
-    # example sound
-    hit()
-    print("> ball hit at paddle " + str(args[0]) )
+    paddle_number = args[0]
+    if (paddle_number == 1 and mode == 'p1') or (paddle_number == 2 and mode == 'p2'):
+        print(f"> Ball hit your paddle ({paddle_number})")
+        hit()
+    else:
+        # The ball hit the opponent's paddle
+        print(f"> Ball hit opponent's paddle ({paddle_number})")
+        pass
+
 
 def on_receive_ballout(address, *args):
-    print("> ball went out on left/right side: " + str(args[0]) )
+    side = args[0]  # 1 for left side, 2 for right side
+    print(f"> Ball went out on {'left' if side == 1 else 'right'} side")
+    if (side == 1 and mode == 'p1') or (side == 2 and mode == 'p2'):
+        subprocess.run(f'say "You lost a point"', shell=True)
+    else:
+        subprocess.run(f'say "You scored a point"', shell=True)
+
 
 def on_receive_ballbounce(address, *args):
     # example sound
@@ -195,49 +222,89 @@ def on_receive_scores(address, *args):
     global prev_score_p1, prev_score_p2
     score_p1 = args[0]
     score_p2 = args[1]
-    print(f"> scores now: {score_p1} vs. {score_p2}")
+    print(f"> Scores now: {score_p1} vs. {score_p2}")
 
     with score_lock:
-        if score_p1 > prev_score_p1:
-            # Player 1 scored
-            message = "Player 1 scored"
-            subprocess.run(f'say "{message}"', shell=True)
-        elif score_p2 > prev_score_p2:
-            # Player 2 scored
-            message = "Player 2 scored"
-            subprocess.run(f'say "{message}"', shell=True)
+        # Determine if the scores have changed
+        if score_p1 != prev_score_p1 or score_p2 != prev_score_p2:
+            subprocess.run(f'say f"The score is {score_p1} to {score_p2}"', shell=True)
 
         prev_score_p1 = score_p1
         prev_score_p2 = score_p2
 
-    message = f"The score is {score_p1} to {score_p2}"
-    subprocess.run(f'say "{message}"', shell=True)
 
 
 def on_receive_level(address, *args):
     level = args[0]
     print(f"> level now: {level}")
-    message = f"The difficulty level is {level}"
-    subprocess.run(f'say "{message}"', shell=True)
+    subprocess.run(f'say f"The difficulty level is {level}"', shell=True)
 
+player_frozen = False
 
 def on_receive_powerup(address, *args):
-    print("> powerup now: " + str(args[0]))
     # 1 - freeze p1
     # 2 - freeze p2
     # 3 - adds a big paddle to p1, not use
     # 4 - adds a big paddle to p2, not use
 
+    powerup_type = args[0]
+    print(f"> Power-up now: {powerup_type}")
+
+    if powerup_type == 1:
+        # Freeze Player 1
+        if mode == 'p1':
+            print("You are frozen!")
+            playsound('self_freeze.mp3', block=False)
+        else:
+            print("Opponent is frozen.")
+    elif powerup_type == 2:
+        # Freeze Player 2
+        if mode == 'p2':
+            print("You are frozen!")
+            playsound('self_freeze.mp3', block=False)
+        else:
+            print("Opponent is frozen.")
+
 def on_receive_p1_bigpaddle(address, *args):
-    print("> p1 has a big paddle now")
-    # when p1 activates their big paddle
+    print("> Player 1 has a big paddle now.")
+    if mode == 'p1':
+        playsound('big_paddle_self.wav', block=False)
+    else:
+        playsound('big_paddle_opp.wav', block=False)
 
 def on_receive_p2_bigpaddle(address, *args):
-    print("> p2 has a big paddle now")
-    # when p2 activates their big paddle
+    print("> Player 2 has a big paddle now.")
+    if mode == 'p2':
+        playsound('big_paddle_self.wav', block=False)
+    else:
+        playsound('big_paddle_opp.wav', block=False)
 
 def on_receive_hi(address, *args):
-    print("> opponent says hi!")
+    global opponent_said_hi, player_said_hi, game_running
+    print("> Opponent says hi!")
+    subprocess.run('say "Your opponent says hi!"', shell=True)
+    opponent_said_hi = True
+    if player_said_hi and not game_running:
+        client.send_message('/setgame', 1)
+
+
+def handle_difficulty_selection(recog_text):
+    global difficulty_selection
+    difficulty_levels = {
+        "easy": 1,
+        "medium": 2,
+        "hard": 3
+    }
+    if recog_text in difficulty_levels:
+        level = difficulty_levels[recog_text]
+        print(f"Setting difficulty to {recog_text.capitalize()} (Level {level})")
+        subprocess.run(f'say "Setting difficulty to {recog_text}"', shell=True)
+        client.send_message('/setlevel', level)
+        difficulty_selection = False  # Stop listening for difficulty
+    else:
+        print(f"Unrecognized difficulty level: {recog_text}")
+        subprocess.run('say "Please say easy, medium, or hard"', shell=True)
+
 
 dispatcher_player = dispatcher.Dispatcher()
 dispatcher_player.map("/hi", on_receive_hi)
@@ -261,28 +328,47 @@ dispatcher_player.map("/p2bigpaddle", on_receive_p2_bigpaddle)
 
 # example 1: speech recognition functions using google api
 # -------------------------------------#
+player_said_hi = False
+opponent_said_hi = False
+
 def listen_to_speech():
-    global quit
+    global quit, difficulty_selection, player_said_hi, game_running
     while not quit:
-        # obtain audio from the microphone
         r = sr.Recognizer()
         with sr.Microphone() as source:
-            print("[speech recognition] Say something!")
+            if difficulty_selection:
+                print("[speech recognition] Please say a difficulty level (easy, medium, hard):")
+            else:
+                print("[speech recognition] Say a command (hi, play, start, quit):")
             audio = r.listen(source)
-        # recognize speech using Google Speech Recognition
         try:
-            # for testing purposes, we're just using the default API key
-            # to use another API key, use `r.recognize_google(audio, key="GOOGLE_SPEECH_RECOGNITION_API_KEY")`
-            # instead of `r.recognize_google(audio)`
             recog_results = r.recognize_google(audio)
             print("[speech recognition] Google Speech Recognition thinks you said \"" + recog_results + "\"")
-            # if recognizing quit and exit then exit the program
-            if recog_results == "play" or recog_results == "start":
-                client.send_message('/g', 1)
+
+            if difficulty_selection:
+                handle_difficulty_selection(recog_results.lower())
+            else:
+                command = recog_results.lower()
+                if command in ["play", "start"]:
+                    client.send_message('/setgame', 1)
+                elif command == "hi":
+                    global player_said_hi
+                    client.send_message('/hi', 0)
+                    print("You said hi!")
+                    subprocess.run('say "Hi!"', shell=True)
+                    player_said_hi = True
+                    if opponent_said_hi and not game_running:
+                        client.send_message('/setgame', 1)
+                elif command == "quit":
+                    quit = True
+                    print("Quitting the game.")
+                    break
         except sr.UnknownValueError:
             print("[speech recognition] Google Speech Recognition could not understand audio")
         except sr.RequestError as e:
             print("[speech recognition] Could not request results from Google Speech Recognition service; {0}".format(e))
+
+
 # -------------------------------------#
 
 # example 2: pitch & volume detection
@@ -395,13 +481,3 @@ while True:
     # client.send_message('/g', 0)
     # big paddle if received power up:
     # client.send_message('/b', 0)
-
-"""
-TO DO
-
-Add a method to track the location of the ball
-Add a method to control the paddle
-Send hi to start the game
-Select difficulty
-
-"""
