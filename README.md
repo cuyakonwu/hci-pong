@@ -1,6 +1,8 @@
 # hci-pong
 Initializing venv
 ``` bash
+virtualenv pong
+
 source pong/bin/activate
 
 pip install -r requirements-host.txt
