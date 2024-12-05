@@ -316,10 +316,13 @@ def on_receive_level(address, *args):
         except sr.UnknownValueError:
             print("[speech recognition] Could not understand audio")
             subprocess.run(['say', 'Please say easy, hard, or insane'])
+            recog_text = r.recognize_google(audio).lower().strip()
+            print(f"Recognized text: '{recog_text}'")
         except sr.RequestError as e:
             print(f"[speech recognition] Could not request results; {e}")
             subprocess.run(['say', 'Speech recognition error'])
-
+            recog_text = r.recognize_google(audio).lower().strip()
+            print(f"Recognized text: '{recog_text}'")
 
 
 def on_receive_powerup(address, *args):
