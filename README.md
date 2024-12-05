@@ -4,8 +4,6 @@ Initializing venv
 brew install python@3.11
 
 python3.11 -m venv pong
-
-virtualenv pong
 ```
 
 ``` bash
