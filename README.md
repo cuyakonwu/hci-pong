@@ -20,7 +20,7 @@ pip3 install SpeechRecognition
 pip3 install pyglet==1.5.21
 pip3 install PyAudio
 pip3 install playsound
-pip3 install aubio
+pip install git+https://git.aubio.org/aubio/aubio/
 ```
 
 For hosting
